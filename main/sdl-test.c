@@ -8,17 +8,28 @@
 #include "filesystem.h"
 #include "text.h"
 
+void draw_screen(SDL_Renderer *renderer, SDL_Texture *texture) {
+    if (texture == NULL) {
+        return;
+    }
+    clear_screen(renderer);
+    draw_image(renderer, texture, 0, 0, 320.0f, 240.0f);
+    SDL_RenderPresent(renderer);
 
-Uint64 TimerCallback(void *param, Uint64 interval)
+}
+
+Uint32 SDLCALL TimerCallback(void *userdata, SDL_TimerID timerID, Uint32 interval)
 {
+    vTaskDelay(pdMS_TO_TICKS(10));
+
     // printf("Timer callback executed!\n");
     return interval; // Return the interval to keep the timer running
 }
 
 void app_main(void) {
-    printf("SDL3 on ESP32\n");
+    printf("Control Panel for ESP32 with SDL3\n");
 
-    if (SDL_Init(SDL_INIT_TIMER | SDL_INIT_VIDEO) != 0) {
+    if (SDL_Init(SDL_INIT_TIMER | SDL_INIT_VIDEO | SDL_INIT_EVENTS) != 0) {
         printf("Unable to initialize SDL: %s\n", SDL_GetError());
         return;
     }
@@ -62,73 +73,36 @@ void app_main(void) {
     SDL_Texture *settings_texture = LoadBackgroundImage(renderer, "/assets/screen-settings.bmp");
     SDL_Texture *thermostat_texture = LoadBackgroundImage(renderer, "/assets/screen-thermostat.bmp");
 
-    // Animation variables
-    float rect_x = 10.0f, speed = 2.0f;
-    int direction = 1;
+    SDL_Texture *current_texture = dashboard_texture;
 
-    // Variables for the BMP position and speed
-    float bmp_x = 2.0f;
-    float bmp_y = 2.0f;
-    float bmp_speed_x = 2.0f;
-    float bmp_speed_y = 2.0f;
+    draw_screen(renderer, current_texture);
 
-   // Variables for the text position, speed, and size
-    float text_x = 30.0f, text_y = 40.0f;
-    float text_speed_x = 1.5f, text_speed_y = 1.2f;
-    float text_scale = 1.0f, text_scale_speed = 0.01f;
-    int text_direction_x = 1, text_direction_y = 1;
-    int scale_direction = 1;
+    SDL_Event event;
 
     while (1) {
-        // Move the BMP image
-        bmp_x += bmp_speed_x;
-        bmp_y += bmp_speed_y;
+        bool should_draw = false;
+        // Poll all events
+        while (SDL_PollEvent(&event)) {
+            switch (event.type) {
+                case SDL_EVENT_QUIT:
+                    // Handle quit event (if needed)
+                    break;
 
-        // Check for collisions with screen edges and bounce
-        if (bmp_x <= 0 || bmp_x + 32 >= 320) bmp_speed_x *= -1;
-        if (bmp_y <= 0 || bmp_y + 32 >= 240) bmp_speed_y *= -1;
+                case SDL_EVENT_FINGER_UP:
+                    printf("Fineger up\n");
+                    should_draw = true;
+                    current_texture = apps_texture;
+                    break;
 
-        // Move the rectangle and bounce it
-        rect_x += speed * direction;
+                // Handle other events if necessary
+            }
+        }
 
-        if (rect_x <= 0 || rect_x + 50 >= 320) direction *= -1;
+        if (should_draw) {
+           draw_screen(renderer, current_texture);
+        }
 
-       // Move the text and bounce it
-        text_x += text_speed_x * text_direction_x;
-        text_y += text_speed_y * text_direction_y;
-        if (text_x <= 0 || text_x >= 200) text_direction_x *= -1;
-        if (text_y <= 0 || text_y >= 200) text_direction_y *= -1;
-
-        // Scale the text size
-        text_scale += text_scale_speed * scale_direction;
-        if (text_scale <= 0.5f || text_scale >= 2.0f) scale_direction *= -1;
-
-        // Clear screen and draw
-        clear_screen(renderer);
-        draw_image(renderer, dashboard_texture, 0, 0, 320.0f, 240.0f);
-        // draw_moving_rectangles(renderer, rect_x);
-#ifndef CONFIG_IDF_TARGET_ESP32P4
-        draw_text(renderer, textTexture, text_x, text_y, 120, 20 * text_scale);
-#endif
-
-        SDL_RenderPresent(renderer);
-        vTaskDelay(pdMS_TO_TICKS(2000));
-
-        draw_image(renderer, controls_texture, 0, 0, 320.0f, 240.0f);
-        SDL_RenderPresent(renderer);
-        vTaskDelay(pdMS_TO_TICKS(2000));
-
-        draw_image(renderer, apps_texture, 0, 0, 320.0f, 240.0f);
-        SDL_RenderPresent(renderer);
-        vTaskDelay(pdMS_TO_TICKS(2000));
-
-        draw_image(renderer, settings_texture, 0, 0, 320.0f, 240.0f);
-        SDL_RenderPresent(renderer);
-        vTaskDelay(pdMS_TO_TICKS(2000));
-
-        draw_image(renderer, thermostat_texture, 0, 0, 320.0f, 240.0f);
-        SDL_RenderPresent(renderer);
-        vTaskDelay(pdMS_TO_TICKS(2000));
+        vTaskDelay(pdMS_TO_TICKS(100));
 
     }
 }
