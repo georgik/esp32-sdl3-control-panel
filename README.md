@@ -1,4 +1,4 @@
-# Control Panle for ESP32-S3-BOX-3 and P4 based on
+# Control Panel for ESP32-S3-BOX-3 and P4 based on
 
 
 ## Requirements
