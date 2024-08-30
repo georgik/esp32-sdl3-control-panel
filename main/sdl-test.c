@@ -8,6 +8,26 @@
 #include "filesystem.h"
 #include "text.h"
 
+typedef struct {
+    int x_min;
+    int y_min;
+    int x_max;
+    int y_max;
+    SDL_Texture *current_texture;
+    SDL_Texture *next_texture;
+} TransitionRegion;
+
+SDL_Texture* handle_transition(int x, int y, SDL_Texture *current_texture, TransitionRegion *transitions, int num_transitions) {
+    for (int i = 0; i < num_transitions; i++) {
+        if (transitions[i].current_texture == current_texture &&
+            x >= transitions[i].x_min && x <= transitions[i].x_max &&
+            y >= transitions[i].y_min && y <= transitions[i].y_max) {
+            return transitions[i].next_texture;
+        }
+    }
+    return current_texture;
+}
+
 void draw_screen(SDL_Renderer *renderer, SDL_Texture *texture) {
     if (texture == NULL) {
         return;
@@ -75,6 +95,16 @@ void app_main(void) {
 
     SDL_Texture *current_texture = dashboard_texture;
 
+    TransitionRegion transitions[] = {
+        {200, 0, 320, 240, dashboard_texture, controls_texture},
+        {0, 120, 320, 200, dashboard_texture, apps_texture},
+        {0, 0, 320, 240, controls_texture, dashboard_texture},
+        {0, 0, 320, 240, apps_texture, settings_texture},
+        {0, 0, 320, 240, settings_texture, dashboard_texture}
+    };
+
+    int num_transitions = sizeof(transitions) / sizeof(transitions[0]);
+
     draw_screen(renderer, current_texture);
 
     SDL_Event event;
@@ -89,9 +119,16 @@ void app_main(void) {
                     break;
 
                 case SDL_EVENT_FINGER_UP:
-                    printf("Fineger up\n");
-                    should_draw = true;
-                    current_texture = apps_texture;
+                    int x = event.tfinger.x;
+                    int y = event.tfinger.y;
+
+                    printf("Finger up [%i, %i]\n", x, y);
+
+                    SDL_Texture *new_texture = handle_transition(x, y, current_texture, transitions, num_transitions);
+                    if (new_texture != current_texture) {
+                        current_texture = new_texture;
+                        should_draw = true;
+                    }
                     break;
 
                 // Handle other events if necessary
