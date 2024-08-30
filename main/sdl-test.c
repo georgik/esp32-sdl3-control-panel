@@ -17,6 +17,24 @@ typedef struct {
     SDL_Texture *next_texture;
 } TransitionRegion;
 
+void slide_transition(SDL_Renderer *renderer, SDL_Texture *current_texture, SDL_Texture *next_texture, int duration_ms) {
+    int steps = duration_ms / 10;
+    for (int i = 0; i <= steps; i++) {
+        float progress = (float)i / steps;
+        int offset = (int)(320 * progress);  // Assuming screen width is 320
+
+        // Render current texture sliding out
+        clear_screen(renderer);
+        draw_image(renderer, current_texture, -offset, 0, 320.0f, 240.0f);
+
+        // Render next texture sliding in
+        draw_image(renderer, next_texture, 320 - offset, 0, 320.0f, 240.0f);
+
+        SDL_RenderPresent(renderer);
+        vTaskDelay(pdMS_TO_TICKS(10));
+    }
+}
+
 SDL_Texture* handle_transition(int x, int y, SDL_Texture *current_texture, TransitionRegion *transitions, int num_transitions) {
     for (int i = 0; i < num_transitions; i++) {
         if (transitions[i].current_texture == current_texture &&
@@ -97,7 +115,7 @@ void app_main(void) {
 
     TransitionRegion transitions[] = {
         {200, 0, 320, 240, dashboard_texture, controls_texture},
-        {0, 120, 320, 200, dashboard_texture, apps_texture},
+        {0, 120, 200, 240, dashboard_texture, apps_texture},
         {0, 0, 320, 240, controls_texture, dashboard_texture},
         {0, 0, 320, 240, apps_texture, settings_texture},
         {0, 0, 320, 240, settings_texture, dashboard_texture}
@@ -111,6 +129,7 @@ void app_main(void) {
 
     while (1) {
         bool should_draw = false;
+        SDL_Texture *new_texture = current_texture;
         // Poll all events
         while (SDL_PollEvent(&event)) {
             switch (event.type) {
@@ -124,10 +143,10 @@ void app_main(void) {
 
                     printf("Finger up [%i, %i]\n", x, y);
 
-                    SDL_Texture *new_texture = handle_transition(x, y, current_texture, transitions, num_transitions);
+                    new_texture = handle_transition(x, y, current_texture, transitions, num_transitions);
                     if (new_texture != current_texture) {
+                        slide_transition(renderer, current_texture, new_texture, 300); // 500ms slide
                         current_texture = new_texture;
-                        should_draw = true;
                     }
                     break;
 
@@ -135,8 +154,8 @@ void app_main(void) {
             }
         }
 
-        if (should_draw) {
-           draw_screen(renderer, current_texture);
+        if (new_texture != current_texture) {
+            draw_screen(renderer, current_texture);
         }
 
         vTaskDelay(pdMS_TO_TICKS(100));
