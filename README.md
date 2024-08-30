@@ -1,13 +1,5 @@
-# Test of port of SDL3 for ESP32
+# Control Panle for ESP32-S3-BOX-3 and P4 based on
 
-Experimental port of SDL3 to ESP32 ESP-IDF v5.3.
-
-Working parts:
-- minimalistic SDL3 build
-- SDL3 - littlefs integration
-- SDL3\_timer
-- SDL\_image - BMP
-- SDL\_ttf
 
 ## Requirements
 
@@ -16,8 +8,8 @@ Working parts:
 ## Build
 
 ```
-git clone git@github.com:georgik/esp32-sdl3-test.git
-cd esp32-sdl3-test
+git clone git@github.com:georgik/esp32-sdl3-control-panel.git
+cd esp32-sdl3-control-panel
 
 idf.py @boards/esp-box-3.cfg set-target esp32-s3
 idf.py @boards/esp-box-3.cfg build
@@ -44,12 +36,6 @@ idf.py @boards/esp32_p4_function_ev_board.cfg reconfigure
 ```shell
 idf.py @boards/m5stack_core_s3.cfg reconfigure
 ```
-
-## Notes
-
-- screen resolution bigger than 320x100 requires enabled PSRAM
-- SDL surface for ESP-IDF framebuffer is defined for RGB565
-- drawing surface requires `SDL_FRect` as destination, not `SDL_Rect`, in `SDL_Rect` case nothing draws
 
 ## Credits
 
